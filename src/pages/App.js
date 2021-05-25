@@ -61,7 +61,8 @@ export default function App() {
                   <NavigationTabs />
                   <Suspense fallback={null}>
                     <Switch>
-                      <Route exact strict path="/order" component={Swap} />
+                      {/* <Route exact strict path="/order" component={Swap} /> */}
+                      <Route exact strict path="/" component={Swap} />
                       <Route
                         exact
                         strict
@@ -74,7 +75,8 @@ export default function App() {
                           }
                         }}
                       />
-                      <Redirect to="/order" />
+                      {/* <Redirect to="/order" /> */}
+                      <Redirect to="/" />
                     </Switch>
                   </Suspense>
                 </BrowserRouter>

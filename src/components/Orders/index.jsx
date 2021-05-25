@@ -80,16 +80,47 @@ async function fetchUserOrders(account, chainId) {
   }
 }
 
+async function getAllAssetsDetail(chainId) {
+  const query = `
+  query {
+    assetDetails {
+      asset
+      totalFunds
+      totalShares
+    }
+  }`
+  try {
+    const res = await fetch(ORDER_GRAPH[chainId], {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+
+    const { data } = await res.json()
+
+    return data.assetDetails
+  } catch (e) {
+    console.warn('Error loading orders from TheGraph', e)
+    return []
+  }
+}
+
 function useGraphOrders(account, chainId, deps = []) {
-  const [state, setState] = useState({ openOrders: [], allOrders: [] })
+  const [state, setState] = useState({ openOrders: [], allOrders: [], assetDetails: [] })
 
   useEffect(() => {
     console.log(`Requesting load orders from the graph`)
     if (account && isAddress(account)) {
       setTimeout(() => {
-        fetchUserOrders(account, chainId).then((orders) => {
+        fetchUserOrders(account, chainId).then(async (orders) => {
           console.log(`Fetched ${orders.allOrders.length} ${orders.openOrders.length} orders from the graph`)
-          setState(orders)
+          const allAssetDetails = await getAllAssetsDetail(chainId)
+          console.log(allAssetDetails)
+          setState({
+            allAssetDetails,
+            allOrders: orders.allOrders,
+            openOrders: orders.openOrders,
+          })
         })
       }, 4000)
     }
@@ -143,20 +174,20 @@ export default function Orders() {
   // Define orders to show as openOrders + pending orders
   useEffect(() => {
     // Aggregate graph and local orders, local orders have priority
-    const allOrders = local.allOrders.concat(
-      graph.allOrders.filter((o) => !local.allOrders.find((c) => c.orderId === o.orderId))
-    )
-    const openOrders = local.openOrders.concat(
-      graph.openOrders.filter((o) => !local.allOrders.find((c) => c.orderId === o.orderId))
-    )
+    // const allOrders = local.allOrders.concat(
+    //   graph.allOrders.filter((o) => !local.allOrders.find((c) => c.orderId === o.orderId))
+    // )
+    // const openOrders = local.openOrders.concat(
+    //   graph.openOrders.filter((o) => !local.allOrders.find((c) => c.orderId === o.orderId))
+    // )
 
-    setOrders(openOrders.concat(allOrders.filter((o) => pendingOrders.find((p) => p.orderId === o.orderId))))
-
+    // setOrders(openOrders.concat(allOrders.filter((o) => pendingOrders.find((p) => p.orderId === o.orderId))))
+    setOrders(graph.openOrders)
     // eslint-disable-next-line
   }, [
     local.allOrders.length,
     local.openOrders.length,
-    graph.allOrders.length,
+    // graph.allOrders.length,
     graph.openOrders.length,
     pendingOrders.length,
   ])
@@ -178,7 +209,13 @@ export default function Orders() {
             {
               <div>
                 {orders.map((order) => (
-                  <OrderCard key={order.orderId} data={order} />
+                  <OrderCard
+                    key={order.orderId}
+                    order={order}
+                    inputAssetDetails={graph.allAssetDetails.filter(
+                      (assetDetails) => assetDetails.asset.toLowerCase() === order.inputToken.toLowerCase()
+                    )}
+                  />
                 ))}
               </div>
             }

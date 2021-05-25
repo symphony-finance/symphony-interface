@@ -64,7 +64,8 @@ export function OrderCard(props) {
   const { t } = useTranslation()
   const { chainId } = useWeb3React()
 
-  const order = props.data
+  const order = props.order
+  const inputAssetDetails = props.inputAssetDetails[0]
 
   const inputToken = order.inputToken === ETH_ADDRESS.toLowerCase() ? 'ETH' : ethers.utils.getAddress(order.inputToken)
   const outputToken =
@@ -100,6 +101,14 @@ export function OrderCard(props) {
   )
   const minReturnAmount = ethers.BigNumber.from(order.minReturnAmount)
   const stoplossAmount = ethers.BigNumber.from(order.stoplossAmount)
+
+  const currentOrderValue = Number(inputAssetDetails.totalFunds) > 0 ?
+    ethers.BigNumber.from(order.shares)
+      .mul(ethers.BigNumber.from(inputAssetDetails.totalFunds))
+      .div(ethers.BigNumber.from(inputAssetDetails.totalShares))
+    : ethers.BigNumber.from("0");
+
+  const yieldEarned = currentOrderValue.gt(0) ? currentOrderValue.sub(inputAmount) : 0;
 
   const explorerLink = last ? getEtherscanLink(chainId, last.response.hash, 'transaction') : undefined
 
@@ -190,6 +199,11 @@ export function OrderCard(props) {
       <p>
         {`Sell: ${amountFormatter(inputAmount, fromDecimals, 6)}`} {fromSymbol}
       </p>
+      {yieldEarned.gt(0) ?
+        <p>
+          {`Yield Earned: ${amountFormatter(yieldEarned, fromDecimals, 6)}`} {fromSymbol}
+        </p>
+        : null}
       <p>
         {`Receive: ${amountFormatter(minReturnAmount, toDecimals, 6)}`} {toSymbol}
       </p>
